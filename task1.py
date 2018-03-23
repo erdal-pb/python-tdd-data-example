@@ -1,10 +1,11 @@
 #!/home/kazooy/anaconda3/bin/python
 #
 #
-#
+####
 
-# Imports
+
 import luigi
+from luigi.contrib.mongodb import MongoCollectionTarget
 import pandas as pd
 import zipfile
 import subprocess
@@ -12,45 +13,65 @@ import csv
 import collections
 import json
 from io import BytesIO 
-from pymongo import MongoClient
 
-###############################################################################
+
 class LoadData(luigi.Task):
-    """ Download the source data and save it to an SQL server """
+    """ Download the source data and save it to a MongoDB server """
+    client = MongoClient('localhost', 27017)
+
+    def output(self):
+        return MongoCollectionTarget(self.client, 'task-1', 'world-facts')
+
 
     def run(self):
         # Get the file and save it locally ----
-        #url = "https://s3-ap-southeast-2.amazonaws.com/vibrato-data-test-" + 
-        #      "public-datasets/world-food-facts.zip"
-        #subprocess.call(["wget", url, "-P/ETL-with-Docker/Task-1"])
-        #cnx = MySQLdb.connect(user='kazooy', password='G00gle!oogle', host='localhost', database='task1')
+        url = ('https://s3-ap-southeast-2.amazonaws.com/vibrato-data-test-' +
+               'public-datasets/world-food-facts.zip')
+        subprocess.run(["wget", url, "-P/tmp/task-1-data"])
 
         # Extract and read in the data ----
-        filename = "world-food-facts.zip"
+        filename = "/tmp/task-1-data/world-food-facts.zip"
         zip_ = zipfile.ZipFile(filename, 'r')
         file_to_unzip = zip_.namelist()[0]
         tsv_file = BytesIO(zip_.read(file_to_unzip))
         tsvin = pd.read_csv(tsv_file, sep='\t')
 
-        # Initialize MongoClient and convert Pandas DF to JSON 
-        client = MongoClient('localhost', 27017)
+        # Convert DF to JSON then upload to MongoDB
+        db = self.client['task-1']
+        collection = db['world-facts']
         data_json = json.loads(tsvin.to_json(orient='records')) 
+        collection.insert(data_json)
 
-        db_cm.insert(data_json)
-
-        
 
 class MakeOutput(luigi.Task):
+    """
+    List the Top 5 Peanut Butters based in Australia and sort
+    them by highest Energy content per 100g
 
-    def output(self):
-        return
+    List the Top 10 Countries together with the number of products
+    with Zinc content above ‘0.001’ and that have more than one product
 
+    Grouping product categories by those that contain Chicken, Pork and Tofu
+    list their Average, Median and Standard Deviation Protein content per 100g,
+    excluding data that is not available (NaN)
+    """
 
     def requires(self):
         return LoadData()
 
-
     def run(self):
+        db_col = self.input().get_collection()
+        self.peanut_butter(db_col)
+
+    def peanut_butter(self, db_col):
+        print(self.db_col.find_one())
+        print(db_col.find({"product_name": "/.*peanut.butter.*/"}))
+        
+
+    def zinc_country(self):
+        return
+
+    def product_categories(self):
         return
 
 
