@@ -31,12 +31,12 @@ import seaborn as sns
 import time
 
 class GetPlaneData(luigi.Task):
-    crash_array = [] 
 
     def output(self):
-        return self.crash_array  
+        return luigi.LocalTarget("crash_data.csv") 
 
     def run(self):
+        crash_array = [] 
         # Get the URL
         url = "http://www.planecrashinfo.com/database.htm"
         page = urlopen(url)
@@ -50,6 +50,7 @@ class GetPlaneData(luigi.Task):
 
         # For each year fetch all the links then open each record
         for year in year_links:
+            print(year)
             # Sometimes the slash is missing in the <a> tag
             if not re.match(com_regex, year):
                 year = year.replace("com", "com/")
@@ -72,7 +73,7 @@ class GetPlaneData(luigi.Task):
         # Initialize CSV
         with open("crash_data.csv", "w+") as my_csv:
             csvWriter = csv.writer(my_csv, delimiter=',')
-            csvWriter.writerows(crash_array)
+            csvWriter.writerows(self.crash_array)
              
 
 if __name__ == "__main__":
