@@ -23,17 +23,18 @@ Output:
 
 import luigi
 import csv
+import re
 from bs4 import BeautifulSoup
 from urllib.request import urlopen
 import pandas as pd
 import seaborn as sns
-
+import time
 
 class GetPlaneData(luigi.Task):
     crash_array = [] 
 
     def output(self):
-        return crash_array
+        return self.crash_array  
 
     def run(self):
         # Get the URL
@@ -45,9 +46,13 @@ class GetPlaneData(luigi.Task):
         years = soup.select('tr a')
         domain = "http://www.planecrashinfo.com"
         year_links = [domain + link.get('href') for link in years]
+        com_regex = r".com\/"
 
         # For each year fetch all the links then open each record
         for year in year_links:
+            # Sometimes the slash is missing in the <a> tag
+            if not re.match(com_regex, year):
+                year = year.replace("com", "com/")
             page = urlopen(year)
             soup = BeautifulSoup(page, "lxml")
             crashes = soup.select('tr a')
@@ -61,7 +66,8 @@ class GetPlaneData(luigi.Task):
                 # Based off the table structure collect every odd index
                 crash_temp = data[3::2]
                 crash_row = [crash] + [row.get_text() for row in crash_temp]
-                crash_array.append(crash_row)
+                self.crash_array.append(crash_row)
+            time.sleep(1)
 
         # Initialize CSV
         with open("crash_data.csv", "w+") as my_csv:
