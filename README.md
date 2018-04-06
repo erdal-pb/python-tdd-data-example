@@ -7,7 +7,7 @@ Using the Python library Luigi, I build two small data pipelines, then put them 
 CreateContainers.sh will create two Docker containers, the first is a stock MongoDB instance, the second is the Python envrionment which the two scripts run on.
 
 Skills:
-- Docker (in general)
+- Docker
 - MongoDB
 - Luigi
 - BeautifulSoup
