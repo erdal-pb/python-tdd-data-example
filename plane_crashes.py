@@ -7,10 +7,11 @@ plane_crashes.py
 ~~~~~
 
 Steps:
-Write the code to perform an ETL process to extract a data set from the supplied source
-Persist outputs and Visualise the data in an accessible format 
-http://www.planecrashinfo.com/database.htm
+Write the code to perform an ETL process to extract a data set
+from the supplied source. Persist outputs and Visualise the data
+in an accessible format
 
+http://www.planecrashinfo.com/database.htm
 
 Output:
     Total fatalities between period 1920-2016 period
@@ -27,7 +28,6 @@ from urllib.request import urlopen
 # Library specific imports
 import luigi
 import pandas as pd
-import seaborn as sns
 import numpy as np
 import matplotlib.pyplot as plt
 from tabulate import tabulate
@@ -36,11 +36,12 @@ from bs4 import BeautifulSoup
 # Set the display backend so we can save the PNG
 plt.switch_backend('agg')
 
+
 class GetData(luigi.Task):
     crash_array = []
 
     def output(self):
-        return luigi.LocalTarget("crash_data_table.csv") 
+        return luigi.LocalTarget("crash_data_table.csv")
 
     def run(self):
         # Get the URL
@@ -71,7 +72,7 @@ class GetData(luigi.Task):
             csvWriter.writerow([h for h in headers])
             csvWriter.writerows(self.crash_array)
 
-    def get_individual_crashes(self, crash):
+    def get_individual_crashes(self, crash, year, soup):
         """
         Provides more complete information but has to fetch for every crash
         hence it's rather slow
@@ -88,7 +89,6 @@ class GetData(luigi.Task):
             crash_temp = data[3::2]
             crash_row = [crash] + [row.get_text() for row in crash_temp]
             self.crash_array.append(crash_row)
-            
 
     def get_table_crashes(self, crash_table):
         """
@@ -96,7 +96,7 @@ class GetData(luigi.Task):
         less information
         """
         crash_data = crash_table.select('table tr')
-        
+
         # Remove the first row
         crash_data.pop(0)
 
@@ -109,7 +109,6 @@ class GetData(luigi.Task):
             aircraft = crash_row[2][0]
             registration = crash_row[2][2]
 
-
             # Extract out the rest with RegEx
             fatalities = re.search(r'(\d+|\?)\/(\d+|\?)\((\d+|\?)\)',
                                    crash_row[3][0])
@@ -121,11 +120,12 @@ class GetData(luigi.Task):
             # Save
             crash_row_final = [date, location, airline, aircraft, registration,
                                deaths, aboard, ground_deaths]
-    
+
             # Remove trailing whitespace and tabs
             for i in range(0, 5):
                 item = crash_row_final[i]
-                item = re.sub(r'(^[ \t\n]+|[ \t\n]+(?=:)|\n$)', '', item, flags=re.M)
+                item = re.sub(r'(^[ \t\n]+|[ \t\n]+(?=:)|\n$)', '', item,
+                              flags=re.M)
                 crash_row_final[i] = item
             self.crash_array.append(crash_row_final)
 
@@ -147,34 +147,36 @@ class MakeOutput(luigi.Task):
         df = pd.read_csv(db)
         df.replace({'\?': np.NaN}, regex=True, inplace=True)
         df.replace({'\n': ''}, regex=True, inplace=True)
-        df[['Deaths','Aboard','Ground_Deaths']] = \
-            df[['Deaths','Aboard','Ground_Deaths']].apply(pd.to_numeric)
-        df['Date'] = df['Date'].apply(pd.to_datetime) 
+        df[['Deaths', 'Aboard', 'Ground_Deaths']] = \
+            df[['Deaths', 'Aboard', 'Ground_Deaths']].apply(pd.to_numeric)
+        df['Date'] = df['Date'].apply(pd.to_datetime)
         df['Year'], df['Month'] = df['Date'].dt.year, df['Date'].dt.month
 
         # Total number of fatalities:
         deaths = df.Deaths.sum() + df.Ground_Deaths.sum()
-        print("The total number of deaths (Air + Ground) is " + str(int(deaths)))
+        print("The total number of deaths (Air + Ground) is " +
+              str(int(deaths)))
 
         # Year of most incidents
         year_df = df.groupby(['Year']).agg(['sum', 'count'])
-        highest_year = year_df.sort_values([('Deaths','count')],
-                       ascending=False).iloc[0].name
+        highest_year = year_df.sort_values([('Deaths', 'count')],
+                                           ascending=False).iloc[0].name
         print("Year with the most number of incidents is " + str(highest_year))
 
         # Worst operators to fly on
         operator_df = df.groupby(['Operator']).agg(['count'])
-        worst_ops = operator_df.sort_values([('Deaths','count')],
-                ascending=False).iloc[:3, 0]
+        worst_ops = operator_df.sort_values([('Deaths', 'count')],
+                                            ascending=False).iloc[:3, 0]
+        print(tabulate(worst_ops))
+        fig_title = 'Top 3 Airlines with the Most Number of Incidents'
         ax = worst_ops.plot('bar',
-                            title='Top 3 Airlines with the Most Number of Incidents',
+                            title=fig_title,
                             rot=0)
         ax.set_xlabel("Airline Operator")
         ax.set_ylabel("Number of Incidents")
         fig = ax.get_figure()
         fig.savefig("2c - Worst Operators.png")
-        
+
 
 if __name__ == "__main__":
     luigi.run()
-
