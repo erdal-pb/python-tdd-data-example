@@ -1,15 +1,14 @@
-#!/home/kazooy/anaconda3/bin/python
+#!/usr/local/bin/python
 '''
 author: David O'Keeffe
 date: 23/3/2018
 
-task_2
+plane_crashes.py
 ~~~~~
 
 Steps:
 Write the code to perform an ETL process to extract a data set from the supplied source
-Persist outputs and Visualise the data in an accessible format
-
+Persist outputs and Visualise the data in an accessible format 
 http://www.planecrashinfo.com/database.htm
 
 
@@ -19,19 +18,25 @@ Output:
     Year with the highest incidents
 '''
 
-import luigi
+# Stdlib imports
 import csv
 import re
-from bs4 import BeautifulSoup
+import time
 from urllib.request import urlopen
+
+# Library specific imports
+import luigi
 import pandas as pd
 import seaborn as sns
 import numpy as np
-import time
-from tabulate import tabulate
 import matplotlib.pyplot as plt
+from tabulate import tabulate
+from bs4 import BeautifulSoup
 
-class GetPlaneData(luigi.Task):
+# Set the display backend so we can save the PNG
+plt.switch_backend('agg')
+
+class GetData(luigi.Task):
     crash_array = []
 
     def output(self):
@@ -124,7 +129,8 @@ class GetPlaneData(luigi.Task):
                 crash_row_final[i] = item
             self.crash_array.append(crash_row_final)
 
-class ComputeStats(luigi.Task):
+
+class MakeOutput(luigi.Task):
     """
     Total fatalities between period 1920-2016 period
     Top 3 airlines with the highest rate of incidents
@@ -132,7 +138,7 @@ class ComputeStats(luigi.Task):
     """
 
     def requires(self):
-        return GetPlaneData()
+        return GetData()
 
     def run(self):
         db = self.input().open()
@@ -142,7 +148,7 @@ class ComputeStats(luigi.Task):
         df.replace({'\?': np.NaN}, regex=True, inplace=True)
         df.replace({'\n': ''}, regex=True, inplace=True)
         df[['Deaths','Aboard','Ground_Deaths']] = \
-            df[['Deaths','Aboard','Ground-Deaths']].apply(pd.to_numeric)
+            df[['Deaths','Aboard','Ground_Deaths']].apply(pd.to_numeric)
         df['Date'] = df['Date'].apply(pd.to_datetime) 
         df['Year'], df['Month'] = df['Date'].dt.year, df['Date'].dt.month
 
@@ -165,10 +171,8 @@ class ComputeStats(luigi.Task):
                             rot=0)
         ax.set_xlabel("Airline Operator")
         ax.set_ylabel("Number of Incidents")
-        plt.show()
-
-
-
+        fig = ax.get_figure()
+        fig.savefig("2c - Worst Operators.png")
         
 
 if __name__ == "__main__":

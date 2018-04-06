@@ -1,9 +1,9 @@
-#!/home/kazooy/anaconda3/bin/python
+#!/usr/local/bin/python
 '''
 author: David O'Keeffe
 date: 23/3/2018
 
-task_1
+world_food_data.py
 ~~~~~
 
 Uses Luigi (although it really doesn't have to) to create a data pipeline
@@ -11,20 +11,24 @@ which reads in a ZIP file from a URL online, uploads it to a MongoDB
 server, does a bunch of queries and spits out some queries.
 '''
 
-import luigi
+
+# Stdlib imports
 import zipfile
-import subprocess
-import csv
-import collections
-import json
+import os
 from io import BytesIO 
+import urllib.request
+import json
+
+# Library specific imports
+import luigi
 from luigi.contrib.mongodb import MongoCollectionTarget
-from pymongo import MongoClient
 import pandas as pd
 import seaborn as sns
+from pymongo import MongoClient
 from tabulate import tabulate
 
-class LoadData(luigi.Task):
+
+class GetData(luigi.Task):
     """
     Download the source data and save it to a MongoDB server.
     
@@ -35,7 +39,8 @@ class LoadData(luigi.Task):
 
     Plus never used MongoDB before so a good chance to pick it up
     """
-    client = MongoClient('localhost', 27017)
+    mongo_address = os.environ['MONGOSERVER_PORT_27017_TCP_ADDR']
+    client = MongoClient(mongo_address, 27017)
 
     def output(self):
         return MongoCollectionTarget(self.client, 'task-1', 'world-facts')
@@ -43,18 +48,20 @@ class LoadData(luigi.Task):
 
     def run(self):
         # Get the file and save it locally ----
+        print("Downloading file from source")
         url = ('https://s3-ap-southeast-2.amazonaws.com/vibrato-data-test-' +
                'public-datasets/world-food-facts.zip')
-        subprocess.run(["wget", url, "-P/tmp/task-1-data"])
+        file_name, headers = urllib.request.urlretrieve(url)
 
         # Extract and read in the data ----
-        filename = "/tmp/task-1-data/world-food-facts.zip"
-        zip_ = zipfile.ZipFile(filename, 'r')
+        print("Got file now extracting and loading into Pandas")
+        zip_ = zipfile.ZipFile(file_name, 'r')
         file_to_unzip = zip_.namelist()[0]
         tsv_file = BytesIO(zip_.read(file_to_unzip))
         tsvin = pd.read_csv(tsv_file, sep='\t')
 
         # Convert DF to JSON then upload to MongoDB
+        print("Convert file to JSON then upload to MongoDB")
         db = self.client['task-1']
         collection = db['world-facts']
         data_json = json.loads(tsvin.to_json(orient='records')) 
@@ -75,7 +82,7 @@ class MakeOutput(luigi.Task):
     """
 
     def requires(self):
-        return LoadData()
+        return GetData()
 
     def run(self):
         db_col = self.input().get_collection()
