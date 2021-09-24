@@ -1,11 +1,8 @@
 Faker==0.8.12
-Flask==0.12.2
 beautifulsoup4==4.6.0
-luigi==2.7.3
 matplotlib==2.2.2
 numpy==1.14.2
 pandas==0.22.0
-pymongo==3.6.1
 seaborn==0.8.1
 tabulate==0.8.2
 lxml==4.1.1
