@@ -4,3 +4,5 @@ pandas
 tabulate
 lxml
 pytest
+matplotlib
+requests
