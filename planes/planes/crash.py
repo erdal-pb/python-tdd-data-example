@@ -21,13 +21,12 @@ Output:
 
 import csv
 import re
+import os
 import logging
 import requests
 import sys
 
 from bs4 import BeautifulSoup
-from tabulate import tabulate
-from urllib.request import urlopen
 
 import numpy as np
 import pandas as pd
@@ -112,13 +111,17 @@ headers = [
     "Ground_Deaths",
 ]
 # Write to CSV
-with open("crash_data_table.csv", "w+") as my_csv:
+try:
+    os.mkdir("temp/")
+except FileExistsError:
+    pass
+with open("temp/crash_data_table.csv", "w+") as my_csv:
     csvWriter = csv.writer(my_csv, delimiter=",")
     csvWriter.writerow([h for h in headers])
     csvWriter.writerows(crash_array)
 
 # Import into Pandas and clean
-df = pd.read_csv("crash_data_table.csv")
+df = pd.read_csv("temp/crash_data_table.csv")
 df.replace({"\?": np.NaN}, regex=True, inplace=True)
 df.replace({"\n": ""}, regex=True, inplace=True)
 df[["Deaths", "Aboard", "Ground_Deaths"]] = df[
@@ -146,4 +149,4 @@ ax = worst_ops.plot(kind="bar", title=fig_title, rot=0)
 ax.set_xlabel("Airline Operator")
 ax.set_ylabel("Number of Incidents")
 fig = ax.get_figure()
-fig.savefig("2c - Worst Operators.png")
+fig.savefig("temp/worst_operators.png")
