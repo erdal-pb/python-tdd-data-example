@@ -45,35 +45,35 @@ def fetch_plane_crash_html(url):
     pass
 
 
-def parse_planes_html(url):
+def parse_plane_crash_html(soup):
     pass
 
 
-def clean_crash_row(url):
+def clean_plane_crash_event(crash_event):
     pass
 
 
-def save_planes_csv(url):
+def make_plane_crash_csv(headers, parsed_data, save_path):
     pass
 
 
-def read_planes_csv_pd(url):
+def read_plane_crash_csv_pd(save_path):
     pass
 
 
-def get_total_fatalites(url):
+def total_fatalites(cleaned_planes_df):
     pass
 
 
-def get_worst_operators(url):
+def worst_flight_operators(cleaned_planes_df):
     pass
 
 
-def get_worst_year(url):
+def most_horrible_year(cleaned_planes_df):
     pass
 
 
-def get_worst_operators(url):
+def make_worst_flight_operators_graph(worst_operators_df):
     pass
 
 
