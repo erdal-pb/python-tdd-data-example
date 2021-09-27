@@ -57,24 +57,31 @@ def fetch_plane_crash_years_details(url, session):
         url = url.replace("com", "com/")
     logging.info(f"Scraping: {url}")
     page = session.get(url)
-    return BeautifulSoup(page.content, "lxml").select("table tr")
+    crash_details = BeautifulSoup(page.content, "lxml").select("table tr")
+    return crash_details[1:]
 
 
-def parse_plane_crash_html(crash_row):
-    """"""
-    date = crash_row[0][0].get_text()
-    location = crash_row[1][0]
-    airline = crash_row[1][2]
-    aircraft = crash_row[2][0]
-    registration = crash_row[2][2]
-
+def parse_fatalities(crash_row):
     fatalities = re.search(r"(\d+|\?)\/(\d+|\?)\((\d+|\?)\)", crash_row[3][0])
     if fatalities:
         deaths = fatalities.group(1)
         aboard = fatalities.group(2)
         ground_deaths = fatalities.group(3)
+        return deaths, aboard, ground_deaths
+    return None, None, None
 
-    # Save
+
+def parse_plane_crash_html(crash_row):
+    """"""
+    crash_row = crash_row.select("td font")
+
+    date = crash_row[0][0].get_text()
+    location = crash_row[1][0]
+    airline = crash_row[1][2]
+    aircraft = crash_row[2][0]
+    registration = crash_row[2][2]
+    deaths, aboard, ground_deaths = parse_fatalities(crash_row=crash_row)
+
     return [
         date,
         location,
@@ -89,27 +96,35 @@ def parse_plane_crash_html(crash_row):
 
 def clean_plane_crash_event(crash_event):
     """"""
-    for i in range(0, 5):
-        item = crash_row_final[i]
-        item = re.sub(r"(^[ \t\n]+|[ \t\n]+(?=:)|\n$)", "", item, flags=re.M)
-        crash_row_final[i] = item
+    for item in crash_event:
+        return re.sub(r"(^[ \t\n]+|[ \t\n]+(?=:)|\n$)", "", item, flags=re.M)
 
 
-def make_plane_crash_csv(headers, parsed_data, save_path):
+def make_plane_crash_csv(parsed_data_array, filename):
     """"""
+    headers = [
+        "Date",
+        "Location",
+        "Operator",
+        "Aircraft",
+        "Registration",
+        "Deaths",
+        "Aboard",
+        "Ground_Deaths",
+    ]
     try:
-        os.mkdir("temp/")
+        os.mkdir(os.environ["SAVE_DIR"])
     except FileExistsError:
         pass
-    with open("temp/crash_data_table.csv", "w+") as my_csv:
+    with open(f"{os.environ['SAVE_DIR']}{filename}", "w+") as my_csv:
         csvWriter = csv.writer(my_csv, delimiter=",")
         csvWriter.writerow([h for h in headers])
-        csvWriter.writerows(crash_array)
+        csvWriter.writerows(parsed_data_array)
 
 
-def read_plane_crash_csv_pd(save_path):
+def read_plane_crash_csv_pd(filename):
     """"""
-    pass
+    return pd.read_csv(f"{os.environ['SAVE_DIR']}{filename}")
 
 
 def clean_pandas_df(df):
@@ -126,81 +141,31 @@ def clean_pandas_df(df):
 
 def total_fatalites(cleaned_df):
     """"""
-    deaths = df.Deaths.sum() + df.Ground_Deaths.sum()
+    deaths = cleaned_df.Deaths.sum()
     logging.info(f"The total number of deaths (Air + Ground) is {int(deaths)}")
+    return deaths
 
 
 def worst_flight_operators(cleaned_df):
     """"""
-    operator_df = df.groupby(["Operator"]).agg(["count"])
-    worst_ops = operator_df.sort_values([("Deaths", "count")], ascending=False).iloc[
-        :3, 0
-    ]
-    print(worst_ops)
+    pass
 
 
 def most_horrible_year(cleaned_df):
     """"""
-    year_df = df.groupby(["Year"]).agg(["sum", "count"])
-    highest_year = (
-        year_df.sort_values([("Deaths", "count")], ascending=False).iloc[0].name
-    )
-    logging.info(f"Year with the most number of incidents is {highest_year}")
+    pass
 
 
 def make_worst_flight_operators_graph(worst_operators_df):
     """"""
-
-    fig_title = "Top 3 Airlines with the Most Number of Incidents"
-    ax = worst_ops.plot(kind="bar", title=fig_title, rot=0)
-    ax.set_xlabel("Airline Operator")
-    ax.set_ylabel("Number of Incidents")
-    fig = ax.get_figure()
-    fig.savefig("temp/worst_operators.png")
-
-    headers = [
-        "Date",
-        "Location",
-        "Operator",
-        "Aircraft",
-        "Registration",
-        "Deaths",
-        "Aboard",
-        "Ground_Deaths",
-    ]
+    pass
 
 
 def main():
     """"""
-    # For each year fetch all the links then open each record
-    # For each year fetch all the links then open each record
-    for count, year_url in enumerate(year_links):
-        # Sometimes the slash is missing in the <a> tag
-        if not re.match(r".*\.com\/", year_url):
-            year_url = year_url.replace("com", "com/")
-        logging.info(f"Scraping: {year_url} \nProgress: {count}/{len(year_links)}")
-        page = s.get(year_url)
-        soup = BeautifulSoup(page.content, "lxml")
-        crash_data = soup.select("table tr")
+    filename = os.environ["FILENAME"]
+    df = pd.read_csv(f"{os.environ['SAVE_DIR']}{filename}")
 
-        # Remove the first row
-        crash_data.pop(0)
 
-        for crash in crash_data:
-            crash_temp = crash.select("td font")
-            crash_row = [row.contents for row in crash_temp]
-    for count, year_url in enumerate(year_links):
-        # Sometimes the slash is missing in the <a> tag
-        if not re.match(r".*\.com\/", year_url):
-            year_url = year_url.replace("com", "com/")
-        logging.info(f"Scraping: {year_url} \nProgress: {count}/{len(year_links)}")
-        page = s.get(year_url)
-        soup = BeautifulSoup(page.content, "lxml")
-        crash_data = soup.select("table tr")
-
-        # Remove the first row
-        crash_data.pop(0)
-
-        for crash in crash_data:
-            crash_temp = crash.select("td font")
-            crash_row = [row.contents for row in crash_temp]
+if __name__ == "__main__":
+    main()

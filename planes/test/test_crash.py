@@ -9,20 +9,14 @@ Thinking how I would test this...
 - Make sure I transform the CSV correctly
 - Make sure the numbers are correct 
 
-This couples the test suite to the code
+This couples the test suite to the code. If you wish to avoid
+this kind of coupling then you need to have an interface agreement. 
 
 """
-
-
-import pytest
-
 import pandas as pd
-
+from planes.better_crash import clean_pandas_df
 
 from .data_generation_helpers import (
-    random_dates,
-    random_names,
-    random_genders,
     assert_dataframe_equal,
 )
 
@@ -50,28 +44,53 @@ def test_fetch_year_details(requests_session):
     plane_crash_details = fetch_plane_crash_years_details(
         url="http://www.planecrashinfo.com/1920/1920.htm", session=requests_session
     )
-    assert len(plane_crash_details) == 52
+    """
+    for crash in plane_crash_details:
+        print(crash.contents)
+        for row in crash.select("td font"):
+            print(row.contents)
+    """
+    print(plane_crash_details[0].select("td_font"))
+    assert len(plane_crash_details) == 51
 
 
 def test_parse_planes_html(requests_session):
-    from planes.better_crash import fetch_plane_crash_years_details
+    """
+    @integration
+    """
+    from planes.better_crash import parse_plane_crash_html
 
-    plane_crash_details = fetch_plane_crash_years_details(
+    plane_crash_details = parse_plane_crash_html(
         url="http://www.planecrashinfo.com/1920/1920.htm", session=requests_session
     )
-    assert len(plane_crash_details) == 52
 
 
 def test_clean_parsed_crash_regex():
+    """
+    (r"(^[ \t\n]+|[ \t\n]+(?=:)|\n$)", "", item, flags=re.M)
+    """
+    from planes.better_crash import clean_plane_crash_event
+
     pass
 
 
-def test_pd_transformations():
+def test_write_csv():
+    from planes.better_crash import make_plane_crash_csv
+
+
+def test_pd_transformations(generate_crashes_df):
     """
-    Date,Location,Operator,Aircraft,Registration,Deaths,Aboard,Ground_Deaths
-    17 Sep 1908,"Fort Myer, Virginia",Military - U.S. Army,Wright Flyer III,?,1,2,0
+    Testing that we read in the CSV correctly and parse it to the correct types
+
     """
-    size = 2
+    from planes.better_crash import clean_pandas_df
+
+    old_dtypes = generate_crashes_df.dtypes 
+
+    cleaned_df = clean_pandas_df(generate_crashes_df)
+
+    print(cleaned_df)
+
     headers = [
         "Date",
         "Location",
@@ -82,26 +101,35 @@ def test_pd_transformations():
         "Aboard",
         "Ground_Deaths",
     ]
-    df = pd.DataFrame(columns=headers)
 
-    df["Date"] = random_dates(
-        start=pd.to_datetime("1940-01-01"), end=pd.to_datetime("2008-01-01"), size=size
-    )
-    df["Location"] = random_names("last_names", size)
+    assert cleaned_df != old_dtypes 
 
 
+def test_total_deaths(generate_crashes_df):
+    from planes.better_crash import total_fatalites
 
-def test_total_deaths():
-    pass
+    cleaned_df = clean_pandas_df(generate_crashes_df)
+    expected_deaths = cleaned_df.Deaths.sum() + cleaned_df.Ground_Deaths.sum()
+
+    assert total_fatalites(cleaned_df=cleaned_df) == expected_deaths
+
+    print(total_fatalites(cleaned_df=cleaned_df))
+
 
 
 def test_worst_year():
+    from planes.better_crash import worst_flight_operators
+
     pass
 
 
 def test_worst_flight_operators():
+    from planes.better_crash import most_horrible_year
+
     pass
 
 
 def test_worst_operator_png():
+    from planes.better_crash import make_worst_flight_operators_graph
+
     pass

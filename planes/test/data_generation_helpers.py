@@ -1,35 +1,49 @@
+import random
+import string
 
 import numpy as np
 import pandas as pd
 
-from faker.providers.person.en import Provider
+from faker import Faker
 
 
-def random_names(name_type, size):
+def random_city(size):
     """
-    Generate n-length ndarray of person names.
-    name_type: a string, either first_names or last_names
+    Generate n-length ndarray of city names.
     """
-    names = getattr(Provider, name_type)
-    return np.random.choice(names, size=size)
+    fake = Faker()
+    return [fake.city() for _ in range(size)] 
 
 
-def random_names(name_type, size):
-    """
-    Generate n-length ndarray of person names.
-    name_type: a string, either first_names or last_names
-    """
-    names = getattr(Provider, name_type)
-    return np.random.choice(names, size=size)
-
-
-def random_genders(size, p=None):
+def random_aircraft(size, p=None):
     """Generate n-length ndarray of genders."""
     if not p:
         # default probabilities
-        p = (0.49, 0.49, 0.01, 0.01)
-    gender = ("M", "F", "O", "")
-    return np.random.choice(gender, size=size, p=p)
+        p = (0.50, 0.50)
+    aircraft = ("Fokker \n100", "Antonov\t26B")
+    return np.random.choice(aircraft, size=size, p=p)
+
+
+def random_operator(size, p=None):
+    """Generate n-length ndarray of genders."""
+    if not p:
+        # default probabilities
+        p = (0.50, 0.50)
+    airlines = ("Busy Bee Congo", "South West Aviaiton")
+    return np.random.choice(airlines, size=size, p=p)
+
+
+def random_int_string(size, p=None):
+    """"""
+    if not p:
+        # default probabilities
+        p = (0.25, 0.25, 0.25, 0.25)
+    ints = ("100", "", "?", "50")
+    return np.random.choice(ints, size=size, p=p)
+
+
+def random_registration(size, p=None):
+    return ["".join(random.sample(string.ascii_lowercase, 5)) for _ in range(size)]
 
 
 def random_dates(start, end, size):
